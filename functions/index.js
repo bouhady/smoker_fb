@@ -35,21 +35,26 @@ function pushTemp(timeDate, temperture1) {
 }
 
 function dataToPlot(dataJson) {
+  var arr = [];
   var resu = ""
+  if (dataJson != null) {
   Object.keys(dataJson).forEach(function (key) {
-    var poi = ',\n[dateFormatter.formatValue(new Date(' + key + ')), ' + dataJson[key] + ']'
-    resu = resu + poi
+      var poi = '[dateFormatter.formatValue(new Date(' + key + ')), ' + dataJson[key] + ']'
+      arr.push(poi)
   })
+  }
+  resu = arr.join(',')
   return resu
 }
 
-exports.bigbengr = functions.https.onRequest((req, res) => {
-
+exports.historyTemp = functions.https.onRequest((req, res) => {
+  var startDate = req.param("startDate", "0")
   res.set('Vary', 'Accept-Encoding, X-My-Custom-Header');
-  // [END vary]
-  // [END_EXCLUDE]
 
-  admin.database().ref('/testData1/').once('value').then(function (snapshot) {
+  admin.database().ref('/testData1/')
+    .orderByKey()
+    .startAt(startDate)
+    .once('value').then(function (snapshot) {
     var results = snapshot.val()
     var points = dataToPlot(results)
     res.status(200).send(`<!doctype html>
@@ -69,9 +74,7 @@ exports.bigbengr = functions.https.onRequest((req, res) => {
             data.addColumn('number', 'Current Temperture');
 
             data.addRows([
-              [dateFormatter.formatValue(new Date(1536469425664)), 54]
-                `+points+`
-
+                `+ points + `
             ]);
 
             var options = {
