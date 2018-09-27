@@ -61,6 +61,8 @@ exports.historyTemp = functions.https.onRequest((req, res) => {
     .once('value').then(function (snapshot) {
       var results = snapshot.val()
       var points = dataToPlot(results)
+      var resultsArray = Object.keys(results)
+      var currentTemp = results[resultsArray[resultsArray.length - 1]]
       res.status(200).send(`<!doctype html>
     <head>
       <title>Time</title>
@@ -103,6 +105,8 @@ exports.historyTemp = functions.https.onRequest((req, res) => {
       </script>
     </head>
     <body>
+      <H1> Current Temperture : `+ currentTemp + `</H1>
+      <br>
       <div id="chart_div" style="width: 900px; height: 500px;"></div>
     </body>
   </html>`);
