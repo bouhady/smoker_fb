@@ -8,11 +8,13 @@ admin.initializeApp();
 
 exports.tempUpdate = functions.https.onRequest((request, response) => {
   var temperture1 = request.param("temperture1", 0)
+  var adc = request.param("adc", 0)
   var date = new Date().valueOf();
   pushTemp(date, temperture1)
-  admin.database().ref('/testData1/').once('value').then(function (snapshot) {
-    response.send("Hellochild " + temperture1 + " " + date + " Added to : \n" + snapshot.val());
-  });
+  pushAdc(date, adc)
+  // admin.database().ref('/testData1/').once('value').then(function (snapshot) {
+    response.send("Hellochild " + temperture1 + " " + date + " Added ");//to : \n" + snapshot.val());
+  // });
 
 });
 function pushTemp(timeDate, temperture1) {
