@@ -13,7 +13,7 @@ exports.tempUpdate = functions.https.onRequest((request, response) => {
   pushTemp(date, temperture1)
   pushAdc(date, adc)
   // admin.database().ref('/testData1/').once('value').then(function (snapshot) {
-    response.send("Hellochild " + temperture1 + " " + date + " Added ");//to : \n" + snapshot.val());
+  response.send("Hellochild " + temperture1 + " " + date + " Added ");//to : \n" + snapshot.val());
   // });
 
 });
@@ -46,6 +46,29 @@ function dataToPlot(dataJson) {
   }
   resu = arr.join(',')
   return resu
+}
+
+
+exports.resetData = functions.https.onRequest((request, response) => {
+  var lastSec = request.param("lastSec", "1000")
+  var now = new Date().valueOf();
+  var startDateFromLast = (now - (lastSec * 1000)).toString()
+  var ref = admin.database().ref("/adcData1/")
+  resetTableUntilDate(ref,startDateFromLast)
+  var testDataRef = admin.database().ref("/testData1/")
+  resetTableUntilDate(testDataRef,startDateFromLast)
+  
+  response.send("Reset testDataRef! ");
+})
+
+function resetTableUntilDate(ref, startDateFromLast) {
+  ref.orderByKey()
+    .endAt(startDateFromLast).once('value').then(function (snapshot) {
+      snapshot.forEach(function (childSnapshot) {
+        //remove each child
+        ref.child(childSnapshot.key).remove();
+      });
+    });
 }
 
 exports.historyTemp = functions.https.onRequest((req, res) => {
