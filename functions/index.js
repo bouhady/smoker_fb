@@ -6,47 +6,18 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 
 
-exports.tempUpdate = functions.https.onRequest((request, response) => {
-  var temperture1 = request.param("temperture1", 0)
-  var adc = request.param("adc", 0)
-  var date = new Date().valueOf();
-  pushTemp(date, temperture1)
-  pushAdc(date, adc)
-  // admin.database().ref('/testData1/').once('value').then(function (snapshot) {
-  response.send("Hellochild " + temperture1 + " " + date + " Added ");//to : \n" + snapshot.val());
-  // });
-});
-
 exports.multiTempUpdate = functions.https.onRequest((request, response) => {
   var temperture1 = request.param("t1", 0)
   var temperture2 = request.param("t2", 0)
   var date = new Date().valueOf();
   var tempertures = {t1:temperture1, t2:temperture2};
   pushMultiTemp(date, tempertures)
-  // admin.database().ref('/testData1/').once('value').then(function (snapshot) {
-  response.send("Hellochild " + temperture1 + " " + date + " Added ");//to : \n" + snapshot.val());
-  // });
+  response.send("Hellochild " + temperture1 + " " + date + " Added ");
 });
-function pushTemp(timeDate, temperture1) {
-  admin.database().ref('/testData1/').child(timeDate).set(temperture1);
-}
+
 function pushMultiTemp(timeDate, tempertures) {
   admin.database().ref('/multiTempData/').child(timeDate).set(tempertures);
 }
-
-exports.adcUpdate = functions.https.onRequest((request, response) => {
-  var adc = request.param("adc", 0)
-  var date = new Date().valueOf();
-  pushAdc(date, adc)
-  admin.database().ref('/testData1/').once('value').then(function (snapshot) {
-    response.send("Hellochild " + adc + " " + date + " Added to : \n" + snapshot.val());
-  });
-
-});
-function pushAdc(timeDate, adc) {
-  admin.database().ref('/adcData1/').child(timeDate).set(adc);
-}
-
 
 function dataToPlot(dataJson) {
   var arr = [];
@@ -95,73 +66,6 @@ function resetTableUntilDate(ref, startDateFromLast) {
       });
     });
 }
-
-exports.historyTemp = functions.https.onRequest((req, res) => {
-  var lastSec = req.param("lastSec", "1000")
-  var tableSource = req.param("table", "/testData1/")
-  res.set('Vary', 'Accept-Encoding, X-My-Custom-Header');
-
-  var now = new Date().valueOf();
-  var startDateFromLast = (now - (lastSec * 1000)).toString()
-  admin.database().ref(tableSource)
-    .orderByKey()
-    .startAt(startDateFromLast)
-    .once('value').then(function (snapshot) {
-      var results = snapshot.val()
-      var points = dataToPlot(results)
-      var resultsArray = Object.keys(results)
-      var currentTemp = results[resultsArray[resultsArray.length - 1]]
-      res.status(200).send(`<!doctype html>
-    <head>
-      <title>Time</title>
-
-      <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-      <script type="text/javascript">
-        google.charts.load('current', {'packages':['corechart']});
-        google.charts.setOnLoadCallback(drawChart);
-  
-        function drawChart() {
-          var data = new google.visualization.DataTable(),
-                dateFormatter = new google.visualization.DateFormat({ formatType: 'short' });
-
-            data.addColumn('string', 'X');
-            data.addColumn('number', 'Current Temperture');
-
-            data.addRows([
-                `+ points + `
-            ]);
-
-            var options = {
-                hAxis: {
-                    title: 'Current Time',
-                    gridlines: {
-                        color: 'none'
-                    }
-                },
-                vAxis: {
-                    title: 'Minutes',
-                    gridlines: {
-                        color: 'none'
-                    }
-                },
-                curveType: 'function'
-            };
-          var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-  
-          chart.draw(data, options);
-        }
-      </script>
-    </head>
-    <body>
-      <H1> Current Temperture : `+ currentTemp + `</H1>
-      <br>
-      <div id="chart_div" style="width: 900px; height: 500px;"></div>
-    </body>
-  </html>`);
-    });
-
-
-});
 
 exports.historyMultiTemp = functions.https.onRequest((req, res) => {
   var lastSec = req.param("lastSec", "1000")
