@@ -57,9 +57,25 @@ exports.resetData = functions.https.onRequest((request, response) => {
   response.send("Reset testDataRef! ");
 })
 
+exports.resetAllData = functions.https.onRequest((request, response) => {
+  var ref = admin.database().ref("/multiTempData/")
+  resetAllTableUntilDate(ref)
+  
+  response.send("Reset testDataRef! 1 ");
+})
+
 function resetTableUntilDate(ref, startDateFromLast) {
   ref.orderByKey()
     .endAt(startDateFromLast).once('value').then(function (snapshot) {
+      snapshot.forEach(function (childSnapshot) {
+        //remove each child
+        ref.child(childSnapshot.key).remove();
+      });
+    });
+}
+function resetAllTableUntilDate(ref) {
+  ref.orderByKey()
+    .once('value').then(function (snapshot) {
       snapshot.forEach(function (childSnapshot) {
         //remove each child
         ref.child(childSnapshot.key).remove();
