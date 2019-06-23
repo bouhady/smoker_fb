@@ -67,15 +67,21 @@ function dataTo2Plot(dataJson) {
 
 
 exports.resetData = functions.https.onRequest((request, response) => {
-  var lastSec = request.param("lastSec", "1000")
+  var lastSec = Number(request.param("lastSec", 1000));
   var now = new Date().valueOf();
   var startDateFromLast = (now - (lastSec * 1000)).toString()
-  var ref = admin.database().ref("/adcData1/")
-  resetTableUntilDate(ref,startDateFromLast)
-  var testDataRef = admin.database().ref("/testData1/")
-  resetTableUntilDate(testDataRef,startDateFromLast)
-  
-  response.send("Reset testDataRef! ");
+  var ref = admin.database().ref("/multiTempData/")
+  // resetTableUntilDate(ref,startDateFromLast);
+  ref.limitToFirst(5000).once("value").then(function(snapshot) {
+    snapshot.forEach(function(child) {
+      child.ref.remove();
+    });
+    response.send("There are "+snapshot.numChildren + " items removed");
+  });
+  // ref.once('value').then("value", function(snapshot) {
+  //   console.log("There are "+snapshot.numChildren()+" items to delete");
+  //   response.send("There are "+snapshot.numChildren()+" items to delete");
+  // });
 })
 
 exports.resetAllData = functions.https.onRequest((request, response) => {
@@ -86,6 +92,10 @@ exports.resetAllData = functions.https.onRequest((request, response) => {
 })
 
 function resetTableUntilDate(ref, startDateFromLast) {
+
+  ref.orderByKey().once('value').then("value", function(snapshot) {
+    console.log("There are "+snapshot.numChildren()+" items to delete");
+  });
   ref.orderByKey()
     .endAt(startDateFromLast).once('value').then(function (snapshot) {
       snapshot.forEach(function (childSnapshot) {
