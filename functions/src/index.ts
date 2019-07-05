@@ -4,8 +4,12 @@
 
 // [START all]
 const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-admin.initializeApp();
+const admin = require("firebase-admin");
+const serviceAccount = require("./smokingcontroller-firebase-adminsdk.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://smokingcontroller.firebaseio.com"
+});
 
 class Tempertures {
   constructor(public t1 : number,public t2 : number) {}
