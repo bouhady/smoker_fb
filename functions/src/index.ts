@@ -15,10 +15,10 @@ class Tempertures {
   constructor(public t1 : number,public t2 : number) {}
 }
 export const multiTempUpdate = functions.https.onRequest((request: any, response: any) => {
-  let temperture1 = Number(request.param("t1", 0));
-  let temperture2 = Number(request.param("t2", 0));
-  let date = new Date().valueOf();
-  var tempertures = new Tempertures(temperture1,temperture2);
+  const temperture1 = Number(request.param("t1", 0));
+  const temperture2 = Number(request.param("t2", 0));
+  const date = new Date().valueOf();
+  const tempertures = new Tempertures(temperture1,temperture2);
   pushMultiTemp(date, tempertures)
   admin.database().ref('/messageEnabled').once('value')
     .then((snapshot: any) => Number(snapshot.val()))
@@ -29,7 +29,7 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
       return null;
     })
     .then((snapshot2: any) => {
-      var bunderies: { min: number, max: number } = snapshot2.val()
+      const bunderies: { min: number, max: number } = snapshot2.val()
       if (temperture1 < bunderies.min) {
         console.log(' MIN Tempertures triggered : t1' + temperture1 + " t2 :" + temperture2 + " min :" + bunderies.min + " max :" + bunderies.max);
         pushDataToSend("Smoker getting cold", "T1 : " + temperture1 + " T2 : " + temperture2);
@@ -53,16 +53,14 @@ function pushMultiTemp(timeDate: any, tempertures: Tempertures) {
 }
 
 function dataTo2Plot(dataJson: any) {
-  var arr: any = [];
-  var resu = ""
+  const arr: any = [];
   if (!(dataJson === null)) {
     Object.keys(dataJson).forEach((key) =>  {
-      var poi = '[dateFormatter.formatValue(new Date(' + key + ')), ' + dataJson[key].t1 + ', ' + dataJson[key].t2 + ']'
-      arr.push(poi)
+      const poi = '[dateFormatter.formatValue(new Date(' + key + ')), ' + dataJson[key].t1 + ', ' + dataJson[key].t2 + ']'
+      arr.push(poi);
     })
   }
-  resu = arr.join(',')
-  return resu
+  return arr.join(',');
 }
 
 
@@ -70,7 +68,7 @@ exports.resetData = functions.https.onRequest((request: any, response: any) => {
   // var lastSec = Number(request.param("lastSec", 1000));
   // var now = new Date().valueOf();
   // var startDateFromLast = (now - (lastSec * 1000)).toString()
-  var ref = admin.database().ref("/multiTempData/")
+  const ref = admin.database().ref("/multiTempData/")
   // resetTableUntilDate(ref,startDateFromLast);
   ref.limitToFirst(5000).once("value").then((snapshot: any) =>  {
     snapshot.forEach( (child: any) => child.ref.remove());
@@ -84,7 +82,7 @@ exports.resetData = functions.https.onRequest((request: any, response: any) => {
 })
 
 exports.resetAllData = functions.https.onRequest((request: any, response: any) => {
-  var ref = admin.database().ref("/multiTempData/")
+  const ref = admin.database().ref("/multiTempData/")
   resetAllTableUntilDate(ref)
 
   response.send("Reset testDataRef! 1 ");
@@ -115,7 +113,7 @@ exports.send = functions.https.onRequest((request: any, response: any) => {
 
   setMessageEnable(request.param("en", "0"));
   admin.database().ref('/tempertureBounderies').once('value').then((snapshot2: any)=>  {
-    var bunderies = snapshot2.val()
+    const bunderies = snapshot2.val()
     pushDataToSend("Smoker Notification On ", "From " + bunderies.min + " to  " + bunderies.max);
     return null;
   }).catch((error : any) => { console.log("error") });
@@ -124,26 +122,26 @@ exports.send = functions.https.onRequest((request: any, response: any) => {
 
 
 function pushDataToSend(title: string, body: string) {
-  var datatosend = { name: title, text: body };
-  var ref = admin.database().ref('/messages')
+  const datatosend = { name: title, text: body };
+  const ref = admin.database().ref('/messages')
   ref.push(datatosend)
 }
 exports.historyMultiTemp = functions.https.onRequest((req: any, res: any) => {
-  var lastSec = Number(req.param("lastSec", 1000))
-  var tableSource = req.param("table", "/multiTempData/")
+  const lastSec = Number(req.param("lastSec", 1000))
+  const tableSource = req.param("table", "/multiTempData/")
   res.set('Vary', 'Accept-Encoding, X-My-Custom-Header');
-  var now = new Date().valueOf();
-  var startDateFromLast = (now - (lastSec * 1000)).toString()
+  const now = new Date().valueOf();
+  const startDateFromLast = (now - (lastSec * 1000)).toString()
   admin.database().ref(tableSource)
     .orderByKey()
     .startAt(startDateFromLast)
     .once('value')
     .then( (snapshot: any) =>  {
-      var results = snapshot.val()
-      var points = dataTo2Plot(results)
-      var resultsArray = Object.keys(results)
-      var currentTemp1 = results[resultsArray[resultsArray.length - 1]].t1
-      var currentTemp2 = results[resultsArray[resultsArray.length - 1]].t2
+      const results = snapshot.val()
+      const points = dataTo2Plot(results)
+      const resultsArray = Object.keys(results)
+      const currentTemp1 = results[resultsArray[resultsArray.length - 1]].t1
+      const currentTemp2 = results[resultsArray[resultsArray.length - 1]].t2
       res.status(200).send(`<!doctype html>
     <head>
       <title>Tempertures</title>
