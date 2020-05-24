@@ -1,13 +1,13 @@
 'use strict';
 
-// import { request } from "https";
+import {admin} from 'firebase-admin/lib/database';
+import DataSnapshot = admin.database.DataSnapshot;
 
-// [START all]
 const functions = require('firebase-functions');
-const admin = require("firebase-admin");
+const fbAdmin = require("firebase-admin");
 const serviceAccount = require("./smokingcontroller-firebase-adminsdk.json");
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+fbAdmin.initializeApp({
+  credential: fbAdmin.credential.cert(serviceAccount),
   databaseURL: "https://smokingcontroller.firebaseio.com"
 });
 
@@ -15,40 +15,40 @@ class Tempertures {
   constructor(public t1 : number,public t2 : number) {}
 }
 export const multiTempUpdate = functions.https.onRequest((request: any, response: any) => {
-  const temperture1 = Number(request.param("t1", 0));
-  const temperture2 = Number(request.param("t2", 0));
+  const temperature1 = Number(request.query.t1 ?? 0);
+  const temperature2 = Number(request.query.t2 ?? 0);
   const date = new Date().valueOf();
-  const tempertures = new Tempertures(temperture1,temperture2);
-  pushMultiTemp(date, tempertures)
-  admin.database().ref('/messageEnabled').once('value')
+  const temperatures = new Tempertures(temperature1,temperature2);
+  pushMultiTemp(date, temperatures)
+  fbAdmin.database().ref('/messageEnabled').once('value')
     .then((snapshot: any) => Number(snapshot.val()))
     .then((messageEnabled: number) => {
       if (messageEnabled === 1) {
-        return admin.database().ref('/tempertureBounderies').once('value')
+        return fbAdmin.database().ref('/tempertureBounderies').once('value')
       }
       return null;
     })
     .then((snapshot2: any) => {
       const bunderies: { min: number, max: number } = snapshot2.val()
-      if (temperture1 < bunderies.min) {
-        console.log(' MIN Tempertures triggered : t1' + temperture1 + " t2 :" + temperture2 + " min :" + bunderies.min + " max :" + bunderies.max);
-        pushDataToSend("Smoker getting cold", "T1 : " + temperture1 + " T2 : " + temperture2);
+      if (temperature1 < bunderies.min) {
+        console.log(' MIN Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+        pushDataToSend("Smoker getting cold", "T1 : " + temperature1 + " T2 : " + temperature2);
         setMessageEnable(0);
       } else {
-        if (temperture1 > bunderies.max) {
-          console.log('MAX Tempertures triggered : t1' + temperture1 + " t2 :" + temperture2 + " min :" + bunderies.min + " max :" + bunderies.max);
-          pushDataToSend("Smoker getting Hot", "T1 : " + temperture1 + " T2 : " + temperture2);
+        if (temperature1 > bunderies.max) {
+          console.log('MAX Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+          pushDataToSend("Smoker getting Hot", "T1 : " + temperature1 + " T2 : " + temperature2);
           setMessageEnable(0);
         }
       }
-      return null;
+      return true;
     }).catch((error: any) => { console.log("error") });
-  response.send("Hellochild " + temperture1 + " " + date + " Added ");
+  response.send("Hellochild " + temperature1 + " " + date + " Added ");
 });
 
 function pushMultiTemp(timeDate: any, tempertures: Tempertures) {
   console.log(`tempertures : ${tempertures.t1} ${tempertures.t2} `);
-  admin.database().ref('/multiTempData/').child(timeDate).set(tempertures)
+  fbAdmin.database().ref('/multiTempData/').child(timeDate).set(tempertures)
   .catch((error: any) => { console.log("error") });
 }
 
@@ -68,54 +68,37 @@ exports.resetData = functions.https.onRequest((request: any, response: any) => {
   // var lastSec = Number(request.param("lastSec", 1000));
   // var now = new Date().valueOf();
   // var startDateFromLast = (now - (lastSec * 1000)).toString()
-  const ref = admin.database().ref("/multiTempData/")
+  const ref = fbAdmin.database().ref("/multiTempData/")
   // resetTableUntilDate(ref,startDateFromLast);
   ref.limitToFirst(5000).once("value").then((snapshot: any) =>  {
     snapshot.forEach( (child: any) => child.ref.remove());
     response.send("There are " + snapshot.numChildren + " items removed");
-    return null;
+    return true;
   }).catch((error : any) => { console.log("error") });
-  // ref.once('value').then("value", function(snapshot) {
-  //   console.log("There are "+snapshot.numChildren()+" items to delete");
-  //   response.send("There are "+snapshot.numChildren()+" items to delete");
-  // });
 })
 
 exports.resetAllData = functions.https.onRequest((request: any, response: any) => {
-  const ref = admin.database().ref("/multiTempData/")
+  const ref = fbAdmin.database().ref("/multiTempData/")
   resetAllTableUntilDate(ref)
 
   response.send("Reset testDataRef! 1 ");
 })
 
-// function resetTableUntilDate(ref: any, startDateFromLast: any) {
-
-//   ref.orderByKey().once('value').then("value", function(snapshot: any) {
-//     console.log("There are "+snapshot.numChildren()+" items to delete");
-//   });
-//   ref.orderByKey()
-//     .endAt(startDateFromLast).once('value').then(function (snapshot: any) {
-//       snapshot.forEach(function (childSnapshot: any) {
-//         //remove each child
-//         ref.child(childSnapshot.key).remove();
-//       });
-//     });
-// }
 function resetAllTableUntilDate(ref: any) {
   ref.orderByKey()
     .once('value').then( (snapshot: any) => {
       snapshot.forEach( (childSnapshot: any) => ref.child(childSnapshot.key).remove());
-      return null;
+      return true;
     }).catch((error : any) => { console.log("error") });
 }
 
 exports.send = functions.https.onRequest((request: any, response: any) => {
 
   setMessageEnable(request.param("en", "0"));
-  admin.database().ref('/tempertureBounderies').once('value').then((snapshot2: any)=>  {
+  fbAdmin.database().ref('/tempertureBounderies').once('value').then((snapshot2: any)=>  {
     const bunderies = snapshot2.val()
     pushDataToSend("Smoker Notification On ", "From " + bunderies.min + " to  " + bunderies.max);
-    return null;
+    return true;
   }).catch((error : any) => { console.log("error") });
   response.send("setMessageEnable ");
 });
@@ -123,20 +106,20 @@ exports.send = functions.https.onRequest((request: any, response: any) => {
 
 function pushDataToSend(title: string, body: string) {
   const datatosend = { name: title, text: body };
-  const ref = admin.database().ref('/messages')
+  const ref = fbAdmin.database().ref('/messages')
   ref.push(datatosend)
 }
 exports.historyMultiTemp = functions.https.onRequest((req: any, res: any) => {
-  const lastSec = Number(req.param("lastSec", 1000))
-  const tableSource = req.param("table", "/multiTempData/")
+  const lastSec = Number(req.query.lastSec ?? 1000)
+  const tableSource = req.query.table ?? "/multiTempData/"
   res.set('Vary', 'Accept-Encoding, X-My-Custom-Header');
   const now = new Date().valueOf();
   const startDateFromLast = (now - (lastSec * 1000)).toString()
-  admin.database().ref(tableSource)
+  fbAdmin.database().ref(tableSource)
     .orderByKey()
     .startAt(startDateFromLast)
     .once('value')
-    .then( (snapshot: any) =>  {
+    .then((snapshot: DataSnapshot) =>  {
       const results = snapshot.val()
       const points = dataTo2Plot(results)
       const resultsArray = Object.keys(results)
@@ -191,7 +174,7 @@ exports.historyMultiTemp = functions.https.onRequest((req: any, res: any) => {
     </body>
   </html>`);
       setMessageEnable(1);
-      return null;
+      return true;
     })
     .catch((error: any) => { console.log("error") });
 
@@ -204,10 +187,7 @@ exports.historyMultiTemp = functions.https.onRequest((req: any, res: any) => {
 // Listens for new messages added to messages/:pushId
 exports.pushNotification = functions.database.ref('/messages/{pushId}').onWrite((change: any, context: any) => {
   console.log('Push notification event triggered');
-  var valueObject = change.after.val();
-  // if (valueObject.photoUrl != null) {
-  //   valueObject.photoUrl = "Sent you a photo!";
-  // }
+  const valueObject = change.after.val();
   const payload = {
     notification: {
       title: valueObject.name,
@@ -219,26 +199,26 @@ exports.pushNotification = functions.database.ref('/messages/{pushId}').onWrite(
     priority: "high",
     timeToLive: 60 * 60 * 24
   };
-  return admin.messaging().sendToTopic("pushNotifications", payload, options);
+  return fbAdmin.messaging().sendToTopic("pushNotifications", payload, options);
 });
 
 function setMessageEnable(enable: number) {
-  var ref = admin.database().ref('/messageEnabled')
-  ref.set(enable)
+  fbAdmin.database()
+      .ref('/messageEnabled')
+      .set(enable);
   if (enable === 1) {
-    pushDataToSend("Smoker App", "Smoker alerts on");
+    // pushDataToSend("Smoker App", "Smoker alerts on");
   }
 }
 
 function setTemperturesBounderies(bounderies: any) {
-  var ref = admin.database().ref('/tempertureBounderies')
-  ref.update(bounderies)
+  fbAdmin.database().ref('/tempertureBounderies').update(bounderies)
 }
 
 exports.updateBounderies = functions.https.onRequest((request: any, response: any) => {
-  var tempertureMin = Number(request.param("min", 0))
-  var tempertureMax = Number(request.param("max", 0))
-  var tempertures = { min: tempertureMin, max: tempertureMax };
-  setTemperturesBounderies(tempertures)
-  response.send("tempertures updated  ");
+  const temperatureMin = Number(request.query.min ?? 0)
+  const temperatureMax = Number(request.query.max ?? 0)
+  const temperatures = { min: temperatureMin, max: temperatureMax };
+  setTemperturesBounderies(temperatures)
+  response.send("temperatures updated  ");
 });
