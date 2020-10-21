@@ -1,3 +1,6 @@
 node_modules
 functions/lib/smokingcontroller-firebase-adminsdk.json
 .idea
+/package-lock.json
+/functions/ui-debug.log
+/ui-debug.log
