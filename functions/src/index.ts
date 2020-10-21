@@ -70,55 +70,15 @@ function pushMultiTemp(timeDate: any, tempertures: Tempertures, sessionId: strin
 }
 
 function dataTo2Plot(dataJson: any) {
-  const arr: any = [];
   if (!(dataJson === null)) {
-    Object.keys(dataJson).forEach((key) =>  {
-      const poi = '[dateFormatter.formatValue(new Date(' + key + ')), ' + dataJson[key].t1 + ', ' + dataJson[key].t2 + ']'
-      arr.push(poi);
+    return Object.entries(dataJson).map((value: [string, any]) => {
+      let va = value[1];
+      va["timestamp"] = value[0];
+      return va;
     })
   }
-  return arr.join(',');
+  return [];
 }
-
-
-exports.resetData = functions.https.onRequest((request: any, response: any) => {
-  // var lastSec = Number(request.param("lastSec", 1000));
-  // var now = new Date().valueOf();
-  // var startDateFromLast = (now - (lastSec * 1000)).toString()
-  const ref = fbAdmin.database().ref("/multiTempData/")
-  // resetTableUntilDate(ref,startDateFromLast);
-  ref.limitToFirst(5000).once("value").then((snapshot: any) =>  {
-    snapshot.forEach( (child: any) => child.ref.remove());
-    response.send("There are " + snapshot.numChildren + " items removed");
-    return true;
-  }).catch((error : any) => { console.log("error") });
-})
-
-exports.resetAllData = functions.https.onRequest((request: any, response: any) => {
-  const ref = fbAdmin.database().ref("/multiTempData/")
-  resetAllTableUntilDate(ref)
-
-  response.send("Reset testDataRef! 1 ");
-})
-
-function resetAllTableUntilDate(ref: any) {
-  ref.orderByKey()
-    .once('value').then( (snapshot: any) => {
-      snapshot.forEach( (childSnapshot: any) => ref.child(childSnapshot.key).remove());
-      return true;
-    }).catch((error : any) => { console.log("error") });
-}
-
-exports.send = functions.https.onRequest((request: any, response: any) => {
-
-  setMessageEnable(request.param("en", "0"));
-  fbAdmin.database().ref('/tempertureBounderies').once('value').then((snapshot2: any)=>  {
-    const bunderies = snapshot2.val()
-    pushDataToSend("Smoker Notification On ", "From " + bunderies.min + " to  " + bunderies.max);
-    return true;
-  }).catch((error : any) => { console.log("error") });
-  response.send("setMessageEnable ");
-});
 
 
 function pushDataToSend(title: string, body: string) {
@@ -184,7 +144,7 @@ function setTemperturesBounderies(bounderies: any) {
 
 exports.updateBounderies = functions.https.onRequest((request: any, response: any) => {
   const temperatureMin = Number(request.query.min ?? 0)
-  const temperatureMax = Number(request.query.max ?? 0)
+  const temperatureMax = Number(request.query.max ?? 250)
   const temperatures = { min: temperatureMin, max: temperatureMax };
   setTemperturesBounderies(temperatures)
   response.send("temperatures updated  ");
