@@ -10,6 +10,7 @@
     "typescript": "^3.9.3"
   },
   "devDependencies": {
+    "@types/node": "^14.14.0",
     "eslint": "^4.13.1",
     "eslint-plugin-promise": "^3.6.0",
     "firebase-functions-test": "^0.2.1"
@@ -24,7 +25,7 @@
     "build": "./node_modules/.bin/tslint --project tsconfig.json && tsc"
   },
   "engines": {
-    "node": "12"
+    "node": "10"
   },
   "private": true
 }

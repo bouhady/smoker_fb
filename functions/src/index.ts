@@ -8,18 +8,35 @@ const fbAdmin = require("firebase-admin");
 const serviceAccount = require("./smokingcontroller-firebase-adminsdk.json");
 fbAdmin.initializeApp({
   credential: fbAdmin.credential.cert(serviceAccount),
-  databaseURL: "https://smokingcontroller.firebaseio.com"
+  databaseURL: "https://online-kamado.firebaseio.com"
 });
 
 class Tempertures {
   constructor(public t1 : number,public t2 : number) {}
 }
+
+export const initSession = functions.https.onRequest(((req: any, resp: any) => {
+  fbAdmin.database().ref('/recentSessionID').once('value')
+      .then((snapshot: any) => Number(snapshot.val()))
+      .then((recentSessionID: number) => {
+        fbAdmin.database().ref('/recentSessionID').set(recentSessionID + 1)
+        const rese = recentSessionID+1;
+        resp.send(rese.toString());
+        return recentSessionID + 1
+      })
+      .catch((error: any) => {
+        console.error(error)
+        resp.send("000")
+      });
+}));
 export const multiTempUpdate = functions.https.onRequest((request: any, response: any) => {
   const temperature1 = Number(request.query.t1 ?? 0);
   const temperature2 = Number(request.query.t2 ?? 0);
+  const sessionId = request.query.sessionID ?? "0000";
+
   const date = new Date().valueOf();
   const temperatures = new Tempertures(temperature1,temperature2);
-  pushMultiTemp(date, temperatures)
+  pushMultiTemp(date, temperatures, sessionId)
   fbAdmin.database().ref('/messageEnabled').once('value')
     .then((snapshot: any) => Number(snapshot.val()))
     .then((messageEnabled: number) => {
@@ -46,9 +63,9 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
   response.send("Hellochild " + temperature1 + " " + date + " Added ");
 });
 
-function pushMultiTemp(timeDate: any, tempertures: Tempertures) {
+function pushMultiTemp(timeDate: any, tempertures: Tempertures, sessionId: string) {
   console.log(`tempertures : ${tempertures.t1} ${tempertures.t2} `);
-  fbAdmin.database().ref('/multiTempData/').child(timeDate).set(tempertures)
+  fbAdmin.database().ref('/multiTempData/' + sessionId + '/').child(timeDate).set(tempertures)
   .catch((error: any) => { console.log("error") });
 }
 
@@ -109,76 +126,26 @@ function pushDataToSend(title: string, body: string) {
   const ref = fbAdmin.database().ref('/messages')
   ref.push(datatosend)
 }
-exports.historyMultiTemp = functions.https.onRequest((req: any, res: any) => {
-  const lastSec = Number(req.query.lastSec ?? 1000)
-  const tableSource = req.query.table ?? "/multiTempData/"
+
+exports.getRecentPoints = functions.https.onRequest((req: any, res: any) => {
+  const trimRecent = Number(req.query.trim ?? 100)
+  const sessionID = req.query.sessionID
   res.set('Vary', 'Accept-Encoding, X-My-Custom-Header');
-  const now = new Date().valueOf();
-  const startDateFromLast = (now - (lastSec * 1000)).toString()
-  fbAdmin.database().ref(tableSource)
-    .orderByKey()
-    .startAt(startDateFromLast)
-    .once('value')
-    .then((snapshot: DataSnapshot) =>  {
-      const results = snapshot.val()
-      const points = dataTo2Plot(results)
-      const resultsArray = Object.keys(results)
-      const currentTemp1 = results[resultsArray[resultsArray.length - 1]].t1
-      const currentTemp2 = results[resultsArray[resultsArray.length - 1]].t2
-      res.status(200).send(`<!doctype html>
-    <head>
-      <title>Tempertures</title>
-
-      <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-      <script type="text/javascript">
-        google.charts.load('current', {'packages':['corechart']});
-        google.charts.setOnLoadCallback(drawChart);
-  
-        function drawChart() {
-          var data = new google.visualization.DataTable(),
-                dateFormatter = new google.visualization.DateFormat({ formatType: 'short' });
-
-            data.addColumn('string', 'X');
-            data.addColumn('number', 'T1');
-            data.addColumn('number', 'T2');
-
-            data.addRows([
-                ${points} 
-            ]);
-
-            var options = {
-                hAxis: {
-                    title: 'Current Time',
-                    gridlines: {
-                        color: 'none'
-                    }
-                },
-                vAxis: {
-                    title: 'Temperture',
-                    gridlines: {
-                        color: 'none'
-                    }
-                },
-                curveType: 'function'
-            };
-          var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-          chart.draw(data, options);
-        }
-      </script>
-    </head>
-    <body>
-      <H1> Current Temperture 1 : ${currentTemp1 } </H1>
-      <H1> Current Temperture 2 : ${currentTemp2 } </H1>
-      <br>
-      <div id="chart_div" style="width: 900px; height: 500px;"></div>
-    </body>
-  </html>`);
-      setMessageEnable(1);
-      return true;
-    })
-    .catch((error: any) => { console.log("error") });
-
-
+  fbAdmin.database().ref('/recentSessionID').once('value')
+      .then((snapshot: any) => Number(snapshot.val()))
+      .then((value:number) => {
+        const sessionIdTable = sessionID ?? value ;
+        const tableSource1 = `/multiTempData/${sessionIdTable}/`;
+        fbAdmin.database().ref(tableSource1)
+            .limitToLast(trimRecent)
+            .once('value')
+            .then((snapshot: DataSnapshot) => {
+              const results = snapshot.val()
+              const points = dataTo2Plot(results)
+              res.status(200).send(points);
+            })
+            .catch((error: any) => { console.error(error) });
+      });
 });
 // [END all]
 
