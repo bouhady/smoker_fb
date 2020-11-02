@@ -42,24 +42,25 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
     .then((messageEnabled: number) => {
       if (messageEnabled === 1) {
         return fbAdmin.database().ref('/tempertureBounderies').once('value')
+            .then((snapshot2: DataSnapshot) => {
+                const bunderies: { min: number, max: number } = snapshot2.val()
+                if (temperature1 < bunderies.min) {
+                    console.log(' MIN Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+                    pushDataToSend("Smoker getting cold", "T1 : " + temperature1 + " T2 : " + temperature2);
+                    setMessageEnable(0);
+                } else {
+                    if (temperature1 > bunderies.max) {
+                        console.log('MAX Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+                        pushDataToSend("Smoker getting Hot", "T1 : " + temperature1 + " T2 : " + temperature2);
+                        setMessageEnable(0);
+                    }
+                }
+                return true;
+            })
       }
-      return null;
+      return false;
     })
-    .then((snapshot2: any) => {
-      const bunderies: { min: number, max: number } = snapshot2.val()
-      if (temperature1 < bunderies.min) {
-        console.log(' MIN Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
-        pushDataToSend("Smoker getting cold", "T1 : " + temperature1 + " T2 : " + temperature2);
-        setMessageEnable(0);
-      } else {
-        if (temperature1 > bunderies.max) {
-          console.log('MAX Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
-          pushDataToSend("Smoker getting Hot", "T1 : " + temperature1 + " T2 : " + temperature2);
-          setMessageEnable(0);
-        }
-      }
-      return true;
-    }).catch((error: any) => { console.error(error) });
+    .catch((error: any) => { console.error(error) });
   response.send("Hellochild " + temperature1 + " " + date + " Added ");
 });
 
