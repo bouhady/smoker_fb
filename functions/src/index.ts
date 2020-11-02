@@ -59,7 +59,7 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
         }
       }
       return true;
-    }).catch((error: any) => { console.log("error") });
+    }).catch((error: any) => { console.error(error) });
   response.send("Hellochild " + temperature1 + " " + date + " Added ");
 });
 
@@ -72,7 +72,7 @@ function pushMultiTemp(timeDate: any, tempertures: Tempertures, sessionId: strin
 function dataTo2Plot(dataJson: any) {
   if (!(dataJson === null)) {
     return Object.entries(dataJson).map((value: [string, any]) => {
-      let va = value[1];
+      const va = value[1];
       va["timestamp"] = value[0];
       return va;
     })
@@ -126,7 +126,12 @@ exports.pushNotification = functions.database.ref('/messages/{pushId}').onWrite(
     priority: "high",
     timeToLive: 60 * 60 * 24
   };
-  return fbAdmin.messaging().sendToTopic("pushNotifications", payload, options);
+  fbAdmin.database().ref('/tokens/').once('value')
+      .then((snapshot: DataSnapshot) => {
+        const keys = Object.keys(snapshot.val());
+        fbAdmin.messaging().sendToDevice(keys,payload,options);
+      })
+  return true;
 });
 
 function setMessageEnable(enable: number) {
