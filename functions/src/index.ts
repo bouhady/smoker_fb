@@ -11,9 +11,11 @@ fbAdmin.initializeApp({
     databaseURL: "https://online-kamado.firebaseio.com"
 });
 
-class Tempertures {
-    constructor(public t1: number, public t2: number) {
-    }
+interface Temperatures {
+   t1: number;
+   t2: number;
+   t3: number;
+   t4: number;
 }
 
 export const initSession = functions.https.onRequest(((req: any, resp: any) => {
@@ -33,10 +35,17 @@ export const initSession = functions.https.onRequest(((req: any, resp: any) => {
 export const multiTempUpdate = functions.https.onRequest((request: any, response: any) => {
     const temperature1 = Number(request.query.t1 ?? 0);
     const temperature2 = Number(request.query.t2 ?? 0);
+    const temperature3 = Number(request.query.t3 ?? 0);
+    const temperature4 = Number(request.query.t4 ?? 0);
     const sessionId = request.query.sessionID ?? "0000";
 
     const date = new Date().valueOf();
-    const temperatures = new Tempertures(temperature1, temperature2);
+    const temperatures: Temperatures = {
+        t1: temperature1,
+        t2: temperature2,
+        t3: temperature3,
+        t4: temperature4
+    };
     pushMultiTemp(date, temperatures, sessionId)
     fbAdmin.database().ref('/messageEnabled').once('value')
         .then((snapshot: any) => Boolean(snapshot.val()))
@@ -46,12 +55,12 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
                     .then((snapshot2: DataSnapshot) => {
                         const bunderies: { min: number, max: number } = snapshot2.val()
                         if (temperature1 < bunderies.min) {
-                            console.log(' MIN Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+                            console.log(' MIN Temperatures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
                             pushDataToSend("Smoker getting cold", "T1 : " + temperature1 + " T2 : " + temperature2);
 
                         }
                         if (temperature1 > bunderies.max) {
-                            console.log('MAX Tempertures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+                            console.log('MAX Temperatures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
                             pushDataToSend("Smoker getting Hot", "T1 : " + temperature1 + " T2 : " + temperature2);
                         }
                         setMessageEnable(false);
@@ -66,8 +75,8 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
     response.send("Hellochild " + temperature1 + " " + date + " Added ");
 });
 
-function pushMultiTemp(timeDate: any, tempertures: Tempertures, sessionId: string) {
-    console.log(`tempertures : ${tempertures.t1} ${tempertures.t2} `);
+function pushMultiTemp(timeDate: any, tempertures: Temperatures, sessionId: string) {
+    console.log(`tempertures new: ${JSON.stringify(tempertures)} `);
     fbAdmin.database().ref('/multiTempData/' + sessionId + '/').child(timeDate).set(tempertures)
         .catch((error: any) => {
             console.log("error")
