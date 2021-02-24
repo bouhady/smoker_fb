@@ -53,17 +53,18 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
             if (messageEnabled) {
                 return fbAdmin.database().ref('/boundaries').once('value')
                     .then((snapshot2: DataSnapshot) => {
-                        const bunderies: { min: number, max: number } = snapshot2.val()
-                        if (temperature1 < bunderies.min) {
-                            console.log(' MIN Temperatures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+                        const boundaries: { min: number, max: number } = snapshot2.val()
+                        console.log(`boundaries : ${boundaries.min}-${boundaries.max} `)
+                        if (temperature1 < boundaries.min) {
+                            console.log(' MIN Temperatures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + boundaries.min + " max :" + boundaries.max);
                             pushDataToSend("Smoker getting cold", "T1 : " + temperature1 + " T2 : " + temperature2);
-
+                            setMessageEnable(false);
                         }
-                        if (temperature1 > bunderies.max) {
-                            console.log('MAX Temperatures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + bunderies.min + " max :" + bunderies.max);
+                        if (temperature1 > boundaries.max) {
+                            console.log('MAX Temperatures triggered : t1' + temperature1 + " t2 :" + temperature2 + " min :" + boundaries.min + " max :" + boundaries.max);
                             pushDataToSend("Smoker getting Hot", "T1 : " + temperature1 + " T2 : " + temperature2);
+                            setMessageEnable(false);
                         }
-                        setMessageEnable(false);
                         return true;
                     })
             }
@@ -79,7 +80,7 @@ function pushMultiTemp(timeDate: any, tempertures: Temperatures, sessionId: stri
     console.log(`tempertures new: ${JSON.stringify(tempertures)} `);
     fbAdmin.database().ref('/multiTempData/' + sessionId + '/').child(timeDate).set(tempertures)
         .catch((error: any) => {
-            console.log("error")
+            console.error(error)
         });
 }
 
