@@ -47,6 +47,10 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
         t4: temperature4
     };
     pushMultiTemp(date, temperatures, sessionId)
+    .then(() => fbAdmin.database().ref('/fanState').once('value')
+    .then((snapshot: { val: () => any; }) => snapshot.val()))
+    .then((fanState => response.send(`{ fan: ${fanState}}`)));
+    
     fbAdmin.database().ref('/messageEnabled').once('value')
         .then((snapshot: any) => Boolean(snapshot.val()))
         .then((messageEnabled: boolean) => {
@@ -73,12 +77,11 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
         .catch((error: any) => {
             console.error(error)
         });
-    response.send("Hellochild " + temperature1 + " " + date + " Added ");
 });
 
-function pushMultiTemp(timeDate: any, tempertures: Temperatures, sessionId: string) {
+async function pushMultiTemp(timeDate: any, tempertures: Temperatures, sessionId: string) {
     console.log(`tempertures new: ${JSON.stringify(tempertures)} `);
-    fbAdmin.database().ref('/multiTempData/' + sessionId + '/').child(timeDate).set(tempertures)
+    return fbAdmin.database().ref('/multiTempData/' + sessionId + '/').child(timeDate).set(tempertures)
         .catch((error: any) => {
             console.error(error)
         });
@@ -126,6 +129,20 @@ exports.getRecentPoints = functions.https.onRequest((req: any, res: any) => {
 });
 // [END all]
 
+exports.fanStateSetter = functions.https.onRequest(async (req: any, res: any) => {
+    const fanState = Number(req.query.fanState ?? 100)
+     fbAdmin.database().ref('/fanState').set(fanState)
+     .then(() => sleep(5000))
+     .then(() => fbAdmin.database().ref('/fanState').set(0));
+     res.send(`Set ${fanState}`)
+});
+
+function sleep(ms: number) {
+    return new Promise((resolve) => {
+        console.log("before delay" + ms);
+      setTimeout(resolve, ms);
+    });
+  }
 
 // Listens for new messages added to messages/:pushId
 exports.pushNotification = functions.database.ref('/messages/{pushId}').onWrite((change: any, context: any) => {
