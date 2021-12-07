@@ -49,7 +49,10 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
     pushMultiTemp(date, temperatures, sessionId)
     .then(() => fbAdmin.database().ref('/fanState').once('value')
     .then((snapshot: { val: () => any; }) => snapshot.val()))
-    .then((fanState => response.send(`{ fan: ${fanState}}`)));
+    .then((fanState => response.send(`{ fan: ${fanState}}`)))
+    .catch((error: any) => {
+        console.error(error)
+    });
     
     fbAdmin.database().ref('/messageEnabled').once('value')
         .then((snapshot: any) => Boolean(snapshot.val()))
