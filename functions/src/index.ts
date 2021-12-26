@@ -132,20 +132,38 @@ exports.getRecentPoints = functions.https.onRequest((req: any, res: any) => {
 });
 // [END all]
 
-exports.fanStateSetter = functions.https.onRequest(async (req: any, res: any) => {
+exports.fanStateSetter = functions.https.onRequest( async (req: any, res: any) => {
     const fanState = Number(req.query.fanState ?? 100)
-     fbAdmin.database().ref('/fanState').set(fanState)
-     .then(() => sleep(5000))
-     .then(() => fbAdmin.database().ref('/fanState').set(0));
-     res.send(`Set ${fanState}`)
+    const fanDuration = Number((req.query.fanDuration ?? 5) * 1000)
+    const sessionID = req.query.session ?? "0"
+
+     fbAdmin.database().ref(`/fanState/${sessionID}`).once('value')
+         .then((snapshot: any) => Number(snapshot.val()?.id??0))
+         .then((value: number ) => {
+             console.log(value);
+             const newID = (value)+1;
+             const payload = {
+                 id: newID,
+                 fanState,
+                 fanDuration,
+                 session: sessionID
+             }
+             fbAdmin.database().ref(`/fanState/${sessionID}`).set(payload);
+         });
+
+
+     //.then(() => sleep(fanDuration))
+     //.then(() => fbAdmin.database().ref('/fanState').set(0));
+     res.set('Access-Control-Allow-Origin', '*')
+         .send(`Set ${fanState}`)
 });
 
-function sleep(ms: number) {
-    return new Promise((resolve) => {
-        console.log("before delay" + ms);
-      setTimeout(resolve, ms);
-    });
-  }
+// function sleep(ms: number) {
+//     return new Promise((resolve) => {
+//         console.log("before delay" + ms);
+//       setTimeout(resolve, ms);
+//     });
+//   }
 
 // Listens for new messages added to messages/:pushId
 exports.pushNotification = functions.database.ref('/messages/{pushId}').onWrite((change: any, context: any) => {
