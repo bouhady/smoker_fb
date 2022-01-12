@@ -1,8 +1,8 @@
 'use strict';
 
-import {admin} from 'firebase-admin/lib/database';
-import DataSnapshot = admin.database.DataSnapshot;
 import { Change } from "firebase-functions";
+import { DataSnapshot } from "firebase-functions/lib/providers/database";
+
 
 const functions = require('firebase-functions');
 const fbAdmin = require("firebase-admin");
@@ -19,7 +19,7 @@ interface Temperatures {
    t4: number;
 }
 
-export const initSession = functions.https.onRequest(((req: any, resp: any) => {
+export const initSession = functions.https.onRequest((req: any, resp: any) => {
     fbAdmin.database().ref('/recentSessionID').once('value')
         .then((snapshot: any) => Number(snapshot.val()))
         .then((recentSessionID: number) => {
@@ -32,7 +32,7 @@ export const initSession = functions.https.onRequest(((req: any, resp: any) => {
             console.error(error)
             resp.send("000")
         });
-}));
+});
 export const multiTempUpdate = functions.https.onRequest((request: any, response: any) => {
     const temperature1 = Number(request.query.t1 ?? 0);
     const temperature2 = Number(request.query.t2 ?? 0);
@@ -41,7 +41,7 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
     const sessionId = request.query.sessionID ?? "0";
 
     const date = new Date().valueOf();
-    const temperatures: Temperatures = {
+    const temperatures = {
         t1: temperature1,
         t2: temperature2,
         t3: temperature3,
