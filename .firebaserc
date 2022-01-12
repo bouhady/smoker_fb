@@ -1,5 +1,6 @@
 {
   "projects": {
-    "bigben": "smokingcontroller"
+    "bigben": "smokingcontroller",
+    "default": "smokingcontroller"
   }
 }
