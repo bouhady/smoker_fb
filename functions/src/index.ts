@@ -2,6 +2,7 @@
 
 import {admin} from 'firebase-admin/lib/database';
 import DataSnapshot = admin.database.DataSnapshot;
+import { Change } from "firebase-functions";
 
 const functions = require('firebase-functions');
 const fbAdmin = require("firebase-admin");
@@ -166,7 +167,7 @@ exports.fanStateSetter = functions.https.onRequest( async (req: any, res: any) =
 //   }
 
 // Listens for new messages added to messages/:pushId
-exports.pushNotification = functions.database.ref('/messages/{pushId}').onWrite((change: any, context: any) => {
+exports.pushNotification = functions.database.ref('/messages/{pushId}').onWrite((change:Change<DataSnapshot>, context: any) => {
     console.log('Push notification event triggered');
     const valueObject = change.after.val();
     const payload = {
