@@ -4,3 +4,4 @@ functions/lib/smokingcontroller-firebase-adminsdk.json
 /package-lock.json
 /functions/ui-debug.log
 /ui-debug.log
+/functions/firebase-debug.log
