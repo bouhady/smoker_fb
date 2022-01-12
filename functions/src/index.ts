@@ -37,7 +37,7 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
     const temperature2 = Number(request.query.t2 ?? 0);
     const temperature3 = Number(request.query.t3 ?? 0);
     const temperature4 = Number(request.query.t4 ?? 0);
-    const sessionId = request.query.sessionID ?? "0000";
+    const sessionId = request.query.sessionID ?? "0";
 
     const date = new Date().valueOf();
     const temperatures: Temperatures = {
@@ -47,9 +47,9 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
         t4: temperature4
     };
     pushMultiTemp(date, temperatures, sessionId)
-    .then(() => fbAdmin.database().ref('/fanState').once('value')
+    .then(() => fbAdmin.database().ref(`/fanState/${sessionId}`).once('value')
     .then((snapshot: { val: () => any; }) => snapshot.val()))
-    .then((fanState => response.send(`{ fan: ${fanState}}`)))
+    .then((fanState => response.send(`${JSON.stringify(fanState)}`)))
     .catch((error: any) => {
         console.error(error)
     });
