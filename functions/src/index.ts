@@ -51,6 +51,7 @@ export const multiTempUpdate = functions.https.onRequest((request: any, response
     .then(() => fbAdmin.database().ref(`/fanState/${sessionId}`).once('value')
     .then((snapshot: { val: () => any; }) => snapshot.val()))
     .then((fanState => response.send(`${JSON.stringify(fanState)}`)))
+      .then(()=> { fbAdmin.database().ref(`/fanState/unRead`).set(false)})
     .catch((error: any) => {
         console.error(error)
     });
@@ -149,7 +150,8 @@ exports.fanStateSetter = functions.https.onRequest( async (req: any, res: any) =
                  fanDuration,
                  session: sessionID
              }
-             fbAdmin.database().ref(`/fanState/${sessionID}`).set(payload);
+             fbAdmin.database().ref(`/fanState/${sessionID}`).set(payload)
+               .then(()=> fbAdmin.database().ref(`/fanState/unRead`).set(true) );
          });
 
 
